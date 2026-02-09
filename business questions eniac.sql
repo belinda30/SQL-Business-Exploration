@@ -23,6 +23,39 @@ WHERE
         'tablets_printing_image',
         'telephony');
 
+/** 2.How many products of these tech categories have been sold (within the time window of the database snapshot)?***/
+
+SELECT
+    product_category_name_english,
+    COUNT(DISTINCT p.product_id) AS sold_tech_products
+FROM
+    products p
+        LEFT JOIN
+    order_items oi ON p.product_id = oi.product_id
+        LEFT JOIN
+    orders os ON oi.order_id = os.order_id
+        LEFT JOIN
+    product_category_name_translation pt ON pt.product_category_name = p.product_category_name
+WHERE
+    pt.product_category_name_english IN ('audio' , 'electronics',
+        'computers_accessories',
+        'computers',
+        'tablets_printing_image',
+        'telephony')
+        AND os.order_status NOT IN ('unavailable' , 'canceled')
+GROUP BY product_category_name_english;
+
+# 3. What percentage does that represent from the overall number of products sold?
+SELECT
+  (SUM(translation.product_category_name_english IN (
+      'audio','computer_accessories','computers','tablets_printing_image','telephony'
+   )) / COUNT(*)) * 100 AS tech_percentage
+FROM order_items oi
+LEFT JOIN products p
+  ON oi.product_id = p.product_id
+INNER JOIN product_category_name_translation translation
+  ON p.product_category_name = translation.product_category_name;
+
 
 # 4. What’s the average price of the products being sold? 
 SELECT 
@@ -32,6 +65,38 @@ FROM
 
 # output: 121$ (i assume $)
 
+
+#5 Are expensive tech products popular?
+# 5.1 
+SELECT
+  AVG(oi.price) AS avg_tech
+FROM order_items oi
+LEFT JOIN products p
+  ON oi.product_id = p.product_id
+INNER JOIN product_category_name_translation t
+  ON p.product_category_name = t.product_category_name
+WHERE t.product_category_name_english IN (
+  'audio','computer_accessories','computers','tablets_printing_image','telephony'
+);## average price for the tech products
+
+#5.2
+SELECT
+  CASE
+    WHEN oi.price > 116.42879094159638 * 1.2 THEN 'expensive'
+    WHEN oi.price < 116.42879094159638 * 0.8 THEN 'cheap'
+    ELSE 'mid'
+  END AS price_category,
+  COUNT(*) AS sold_items
+FROM order_items oi
+LEFT JOIN products p
+  ON oi.product_id = p.product_id
+INNER JOIN product_category_name_translation t
+  ON p.product_category_name = t.product_category_name
+WHERE t.product_category_name_english IN (
+  'audio','computer_accessories','computers','tablets_printing_image','telephony'
+)
+GROUP BY price_category; ## count of cheap and expensive sold products products
+    
 /* 
 2.2. In relation to the sellers:
 
@@ -62,6 +127,33 @@ FROM
         orders
     GROUP BY order_year) total_months_magist; # the last name (total_months_magist) is an alias for the Subquery (the one in the parentheses)
 
+/*** 8. What is the total amount earned by all sellers? What is the total amount earned by all Tech sellers?****/
+SELECT
+    SUM(oi.price) AS total_amount_by_all_sellers,
+    SUM(CASE
+        WHEN
+            pt.product_category_name_english IN ('audio' , 'electronics',
+                'computers_accessories',
+                'computers',
+                'tablets_printing_image',
+                'telephony')
+        THEN
+            oi.price
+        ELSE 0
+    END) AS total_amount_by_tech_sellers
+FROM
+    order_items oi
+        LEFT JOIN
+    products p ON oi.product_id = p.product_id
+        LEFT JOIN
+    orders o ON oi.order_id = o.order_id
+        LEFT JOIN
+    product_category_name_translation pt ON pt.product_category_name = p.product_category_name
+        AND o.order_status = 'delivered';
+
+
+
+    
 /* 
 2.3. In relation to the delivery time:
 
@@ -69,6 +161,105 @@ FROM
 11. How many orders are delivered on time vs orders delivered with a delay?
 12. Is there any pattern for delayed orders, e.g. big products being delayed more often?
 */
+
+# 10. What’s the average time between the order being placed and the product being delivered?*/
+
+-- for all sellers
+
+-- delivery estimation:
+
+SELECT
+    ROUND(AVG(DATEDIFF(order_estimated_delivery_date,
+                    order_purchase_timestamp)),
+            2) AS avg_delivery_estimation
+FROM
+    orders
+WHERE
+    order_estimated_delivery_date IS NOT NULL;
+-- 24.33
+
+-- delivery time:
+SELECT
+    ROUND(AVG(DATEDIFF(order_delivered_customer_date,
+                    order_purchase_timestamp)),
+            2) AS avg_delivery_time_days
+FROM
+    orders
+WHERE
+    order_delivered_customer_date IS NOT NULL;
+
+-- for tech sellers
+
+-- delivery estimation:
+SELECT
+    ROUND(AVG(DATEDIFF(order_estimated_delivery_date,
+                    order_purchase_timestamp)),
+            2) AS avg_delivery_estimation_tech
+FROM
+    orders
+        LEFT JOIN
+    order_items USING (order_id)
+        LEFT JOIN
+    products USING (product_id)
+WHERE
+    order_estimated_delivery_date IS NOT NULL
+        AND product_category_name IN ('audio' , 'eletronicos',
+        'informatica_acessorios',
+        'pcs',
+        'tablets_impressao_imagem',
+        'telefonia');
+-- 24.79
+
+-- delivery time:
+SELECT
+    ROUND(AVG(DATEDIFF(order_delivered_customer_date,
+                    order_purchase_timestamp)),
+            2) AS avg_delivery_time_tech
+FROM
+    orders
+        LEFT JOIN
+    order_items USING (order_id)
+        LEFT JOIN
+    products USING (product_id)
+WHERE
+    order_delivered_customer_date IS NOT NULL
+        AND product_category_name IN ('audio' , 'eletronicos',
+        'informatica_acessorios',
+        'pcs',
+        'tablets_impressao_imagem',
+        'telefonia');
+-- 13.01
+
+# 11. How many orders are delivered on time vs orders delivered with a delay?
+
+SELECT
+case
+      When order_delivered_customer_date <= order_estimated_delivery_date
+       then 'On time'
+	  Else 'Delayed'
+	End as delivery_status,
+    count(*) as num_orders
+From orders
+Where order_delivered_customer_date is not Null
+group by delivery_status;
+
+# Bonus percentage
+
+SELECT
+	delivery_status,
+    ROUND(COUNT(*) * 100.0 / SUM(count(*)) OVER (), 2) AS pct_orders
+FROM (
+	SELect
+	 Case
+      When order_delivered_customer_date <= order_estimated_delivery_date
+       then 'On time'
+	  Else 'Delayed'
+	End as delivery_status
+  From orders
+  Where order_delivered_customer_date is not Null
+) t
+group by delivery_status;
+
 
 # 12. Is there any pattern for delayed orders, e.g. big products being delayed more often?
 
