@@ -107,7 +107,6 @@ GROUP BY price_category; ## count of cheap and expensive sold products products
 */
 
 # 6. How many months of data are included in the magist database?
-
 # This counts how many months per year separately
 SELECT 
     YEAR(order_purchase_timestamp) AS order_year,
@@ -150,9 +149,6 @@ FROM
         LEFT JOIN
     product_category_name_translation pt ON pt.product_category_name = p.product_category_name
         AND o.order_status = 'delivered';
-
-
-
     
 /* 
 2.3. In relation to the delivery time:
