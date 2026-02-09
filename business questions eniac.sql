@@ -1,17 +1,10 @@
 USE magist;
 /* 
-2.1. In relation to the products:
-
-1. What categories of tech products does Magist have?
-2. How many products of these tech categories have been sold (within the time window of the database snapshot)? 
-3. What percentage does that represent from the overall number of products sold?
-4. What’s the average price of the products being sold?
-5. Are expensive tech products popular? *
-
-* TIP: Look at the function CASE WHEN to accomplish this task. 
+2.1. In relation to the products: 
 */
 
-# 1. What categories of tech products does Magist have? Tech Categories: audio, electronics, computers_accessories, computers, tablets_printing_image, telephony
+
+/** 1. What categories of tech products does Magist have? Tech Categories: audio, electronics, computers_accessories, computers, tablets_printing_image, telephony **/
 SELECT DISTINCT
     (product_category_name_english)
 FROM
@@ -23,7 +16,9 @@ WHERE
         'tablets_printing_image',
         'telephony');
 
-/** 2.How many products of these tech categories have been sold (within the time window of the database snapshot)?***/
+
+
+/** 2.How many products of these tech categories have been sold (within the time window of the database snapshot)? **/
 
 SELECT
     product_category_name_english,
@@ -45,7 +40,9 @@ WHERE
         AND os.order_status NOT IN ('unavailable' , 'canceled')
 GROUP BY product_category_name_english;
 
-# 3. What percentage does that represent from the overall number of products sold?
+
+
+/** 3. What percentage does that represent from the overall number of products sold? **/
 SELECT
   (SUM(translation.product_category_name_english IN (
       'audio','computer_accessories','computers','tablets_printing_image','telephony'
@@ -57,7 +54,8 @@ INNER JOIN product_category_name_translation translation
   ON p.product_category_name = translation.product_category_name;
 
 
-# 4. What’s the average price of the products being sold? 
+
+/** 4. What’s the average price of the products being sold? **/
 SELECT 
     ROUND(AVG(price)) AS average_price
 FROM
@@ -65,9 +63,10 @@ FROM
 
 # output: 121$ (i assume $)
 
+	
 
-#5 Are expensive tech products popular?
-# 5.1 
+/** 5 Are expensive tech products popular? * TIP: Look at the function CASE WHEN to accomplish this task. **/
+-- 5.1 
 SELECT
   AVG(oi.price) AS avg_tech
 FROM order_items oi
@@ -79,7 +78,7 @@ WHERE t.product_category_name_english IN (
   'audio','computer_accessories','computers','tablets_printing_image','telephony'
 );## average price for the tech products
 
-#5.2
+-- 5.2
 SELECT
   CASE
     WHEN oi.price > 116.42879094159638 * 1.2 THEN 'expensive'
@@ -96,18 +95,16 @@ WHERE t.product_category_name_english IN (
   'audio','computer_accessories','computers','tablets_printing_image','telephony'
 )
 GROUP BY price_category; ## count of cheap and expensive sold products products
-    
+
+
+	
 /* 
 2.2. In relation to the sellers:
-
-6. How many months of data are included in the magist database?
-7. How many sellers are there? How many Tech sellers are there? What percentage of overall sellers are Tech sellers?
-8. What is the total amount earned by all sellers? What is the total amount earned by all Tech sellers?
-9. Can you work out the average monthly income of all sellers? Can you work out the average monthly income of Tech sellers? 
 */
 
-# 6. How many months of data are included in the magist database?
-# This counts how many months per year separately
+	
+/** 6. How many months of data are included in the magist database? **/
+-- 6.1 This counts how many months per year separately
 SELECT 
     YEAR(order_purchase_timestamp) AS order_year,
     COUNT(DISTINCT MONTH(order_purchase_timestamp)) AS months_in_year
@@ -115,7 +112,7 @@ FROM
     orders
 GROUP BY order_year;
 
-# This counts the total of all months
+-- 6.2 This counts the total of all months
 SELECT 
     SUM(months_in_year) AS total_months
 FROM
@@ -126,7 +123,37 @@ FROM
         orders
     GROUP BY order_year) total_months_magist; # the last name (total_months_magist) is an alias for the Subquery (the one in the parentheses)
 
-/*** 8. What is the total amount earned by all sellers? What is the total amount earned by all Tech sellers?****/
+
+	
+/** 7. How many sellers are there? How many Tech sellers are there? What percentage of overall sellers are Tech sellers? **/
+		
+SELECT 
+    (SELECT 
+            COUNT(DISTINCT seller_id)
+        FROM
+            sellers) AS total_sellers,
+    COUNT(DISTINCT seller_id) AS total_tech_sellers,
+    ROUND(COUNT(DISTINCT seller_id) * 100 / (SELECT 
+                    COUNT(DISTINCT seller_id)
+                FROM
+                    sellers),
+            2) AS tech_sellers_percentage
+FROM
+    sellers
+        LEFT JOIN
+    order_items USING (seller_id)
+        LEFT JOIN
+    products USING (product_id)
+WHERE
+    product_category_name IN ('audio' , 'eletronicos',
+        'informatica_acessorios',
+        'pcs',
+        'tablets_impressao_imagem',
+        'telefonia');
+
+
+
+/** 8. What is the total amount earned by all sellers? What is the total amount earned by all Tech sellers? **/
 SELECT
     SUM(oi.price) AS total_amount_by_all_sellers,
     SUM(CASE
@@ -149,18 +176,57 @@ FROM
         LEFT JOIN
     product_category_name_translation pt ON pt.product_category_name = p.product_category_name
         AND o.order_status = 'delivered';
-    
+
+
+
+/** 9. Can you work out the average monthly income of all sellers? Can you work out the average monthly income of Tech sellers? **/
+
+-- For all sellers --
+
+SELECT ROUND(13494400.74/ 3095 / 25,2);
+-- 174.40
+
+SELECT ROUND(13494400.74/25,2);
+-- 539,776.03
+
+
+-- For tech sellers --
+-- total revenue
+SELECT 
+    ROUND(SUM(price), 2) AS total_tech_revenue
+FROM
+    order_items
+        LEFT JOIN
+    orders USING (order_id)
+        LEFT JOIN
+    products USING (product_id)
+WHERE
+    order_status NOT IN ('unavailable' , 'canceled', 'created')
+        AND product_category_name IN ('audio' , 'eletronicos',
+        'informatica_acessorios',
+        'pcs',
+        'tablets_impressao_imagem',
+        'telefonia');
+-- 1,664,904.34
+
+-- monthly income --
+
+SELECT ROUND(1664904.34/453/25,2);
+-- 147.01
+
+SELECT ROUND(1664904.34/25,2);
+-- 66,596.17
+
+
+
 /* 
 2.3. In relation to the delivery time:
-
-10. What’s the average time between the order being placed and the product being delivered?
-11. How many orders are delivered on time vs orders delivered with a delay?
-12. Is there any pattern for delayed orders, e.g. big products being delayed more often?
 */
 
-# 10. What’s the average time between the order being placed and the product being delivered?*/
 
--- for all sellers
+/** 10. What’s the average time between the order being placed and the product being delivered? **/
+
+-- for all sellers --
 
 -- delivery estimation:
 
@@ -206,7 +272,7 @@ WHERE
         'telefonia');
 -- 24.79
 
--- delivery time:
+-- delivery time --
 SELECT
     ROUND(AVG(DATEDIFF(order_delivered_customer_date,
                     order_purchase_timestamp)),
@@ -226,38 +292,41 @@ WHERE
         'telefonia');
 -- 13.01
 
-# 11. How many orders are delivered on time vs orders delivered with a delay?
+
+
+/** 11. How many orders are delivered on time vs orders delivered with a delay? **/
 
 SELECT
-case
-      When order_delivered_customer_date <= order_estimated_delivery_date
-       then 'On time'
-	  Else 'Delayed'
-	End as delivery_status,
-    count(*) as num_orders
-From orders
-Where order_delivered_customer_date is not Null
-group by delivery_status;
+CASE
+      WHEN order_delivered_customer_date <= order_estimated_delivery_date
+       THEN 'On time'
+	  ELSE 'Delayed'
+	END AS delivery_status,
+    COUNT(*) AS num_orders
+FROM orders
+WHERE order_delivered_customer_date IS NOT NULL
+GROUP BY delivery_status;
 
-# Bonus percentage
+-- Bonus percentage --
 
 SELECT
 	delivery_status,
-    ROUND(COUNT(*) * 100.0 / SUM(count(*)) OVER (), 2) AS pct_orders
+    ROUND(COUNT(*) * 100.0 / SUM(COUNT(*)) OVER (), 2) AS pct_orders
 FROM (
-	SELect
-	 Case
-      When order_delivered_customer_date <= order_estimated_delivery_date
-       then 'On time'
-	  Else 'Delayed'
-	End as delivery_status
-  From orders
-  Where order_delivered_customer_date is not Null
+	SELECT
+	 CASE
+      WHEN order_delivered_customer_date <= order_estimated_delivery_date
+       THEN 'On time'
+	  ELSE 'Delayed'
+	END AS delivery_status
+  FROM orders
+  WHERE order_delivered_customer_date IS NOT NULL
 ) t
-group by delivery_status;
+GROUP BY delivery_status;
 
 
-# 12. Is there any pattern for delayed orders, e.g. big products being delayed more often?
+
+/** 12. Is there any pattern for delayed orders, e.g. big products being delayed more often? **/
 
 SELECT 
     CASE
