@@ -70,9 +70,7 @@ Analysis shows that **96% of Magist’s orders** originate from customers in the
 
 ## 📜 Sources
 
-1. 
-[Sieve (2015) - Average Delivery Deadlines in Brazil](https://www.terra.com.br/economia/direitos-do-consumidor/veja-a-media-para-entrega-de-produtos-de-compras-on-line,a112eb9a46b3b5ebbcdc54333534a9c6gpsbRCRD.html) 
+1. [Sieve (2015) - Average Delivery Deadlines in Brazil](https://www.terra.com.br/economia/direitos-do-consumidor/veja-a-media-para-entrega-de-produtos-de-compras-on-line,a112eb9a46b3b5ebbcdc54333534a9c6gpsbRCRD.html) 
 
 
-2. 
-[Atlas of Human Development in Brazil (2018)](http://www.atlasbrasil.org.br/ranking) 
+2. [Atlas of Human Development in Brazil (2018)](http://www.atlasbrasil.org.br/ranking) 
